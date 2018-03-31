@@ -76,6 +76,7 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
+    # put bias as extra column of X, and add extra row to W can reduce computation cost
 #     bias_plus1 = np.array([np.ones(X.shape[0])])
 #     b1 = np.array([b1])
 #     X = np.c_[bias_plus1.T, X]
@@ -89,9 +90,9 @@ class TwoLayerNet(object):
 #     W2 = np.r_[b2,W2]
 #     a1 = np.maximum(0, z1) # pass through ReLU activation function
 #     scores = a1.dot(W2) + b2
-    z1 = X.dot(W1) + b1
-    a1 = np.maximum(0, z1) # pass through ReLU activation function
-    scores = a1.dot(W2) + b2
+    h = X.dot(W1) + b1
+    h_relu = np.maximum(0, h) # pass through ReLU activation function
+    scores = h_relu.dot(W2) + b2
     pass
     #############################################################################
     #                              END OF YOUR CODE                             #
@@ -131,20 +132,20 @@ class TwoLayerNet(object):
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
     # compute the gradient on scores
-    dscores = probs
-    dscores[range(N),y] -= 1
-    dscores /= N
+    grad_scores = probs
+    grad_scores[range(N),y] -= 1
+    grad_scores /= N
 
-    # W2 and b2
-    grads['W2'] = np.dot(a1.T, dscores)
-    grads['b2'] = np.sum(dscores, axis=0)
-    # next backprop into hidden layer
-    dhidden = np.dot(dscores, W2.T)
+    # W2 and b2: Using h_relu and grad_scores sum on colums to compute grad_W2
+    grads['W2'] = np.dot(h_relu.T, grad_scores) 
+    grads['b2'] = np.sum(grad_scores, axis=0)
+    # Using W2 and grad_scores sum on rows to compute grad_h_relu
+    grad_h = np.dot(grad_scores, W2.T)
     # backprop the ReLU non-linearity
-    dhidden[a1 <= 0] = 0
-    # finally into W,b
-    grads['W1'] = np.dot(X.T, dhidden)
-    grads['b1'] = np.sum(dhidden, axis=0)
+    grad_h[h <= 0] = 0
+    # W1 and b1: Using X and grad_h sum on columns to compute grad_W1(same as computing W2)
+    grads['W1'] = np.dot(X.T, grad_h)
+    grads['b1'] = np.sum(grad_h, axis=0)
 
     # add regularization gradient contribution
     grads['W2'] += reg * W2
